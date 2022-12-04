@@ -1,0 +1,7 @@
+ManifestFileVersion: 0
+CRC: 4103423377
+AssetBundleManifest:
+  AssetBundleInfos:
+    Info_0:
+      Name: dlc/eqw.unity3d
+      Dependencies: {}
