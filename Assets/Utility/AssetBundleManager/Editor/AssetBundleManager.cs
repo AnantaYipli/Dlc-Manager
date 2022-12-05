@@ -1,37 +1,205 @@
+using Microsoft.SqlServer.Server;
 using System.IO;
 using UnityEditor;
 using UnityEngine;
-using static UnityEngine.Rendering.VirtualTexturing.Debugging;
 using Object = UnityEngine.Object;
+
+public enum ObjectType { none, Scene, Scriptable }
 
 public class AssetBundleManager : EditorWindow
 {
-    public Object testObj;
+    ObjectType objectType;
 
+    Object testObj;
+    bool isCustome = false;
+    bool w = false, a = false, i = false, m = false;
     public string bundleName;
 
-    [MenuItem("Window/My Window")]
+    const string dlcExt = "yiplidlc";
+
+    [MenuItem("Utility/Assset Bundle Browser")]
     static void Init()
     {
-        AssetBundleManager window = (AssetBundleManager)EditorWindow.GetWindow(typeof(AssetBundleManager));
+        AssetBundleManager window = (AssetBundleManager)EditorWindow.GetWindowWithRect(typeof(AssetBundleManager), new Rect(0, 0, 400, 500));
         window.Show();
     }
 
+
     void OnGUI()
     {
-        GUILayout.Label("Base Settings", EditorStyles.boldLabel);
-        bundleName = EditorGUILayout.TextField("Text Field", bundleName);
-        testObj = EditorGUILayout.ObjectField(testObj, typeof(Object), true);
+        #region GUI Style
+        GUIStyle _guiHeader = new GUIStyle()
+        {
+            fontSize = 26,
+            richText = true,
+            fontStyle = FontStyle.Bold,
+            alignment = TextAnchor.MiddleCenter,
+            padding = new RectOffset(0, 0, 5, 0)
+        };
+        _guiHeader.normal.textColor = Color.white;
+
+        GUIStyle _guiLable = new GUIStyle()
+        {
+            fontSize = 12,
+            richText = true,
+            fontStyle = FontStyle.Bold,
+            alignment = TextAnchor.MiddleLeft,
+            padding = new RectOffset(10, 10, 3, 3)
+        };
+        _guiLable.normal.textColor = Color.white;
+
+        GUILayoutOption[] _lableOpt = new GUILayoutOption[]
+        {
+            GUILayout.Width(150)
+        };
+        GUILayoutOption[] _fieldOpt = new GUILayoutOption[]
+        {
+            GUILayout.MinWidth(200)
+        };
+        #endregion
+
+        GUILayout.Label("Asset Bundle Creator", _guiHeader, new GUILayoutOption[] { GUILayout.Height(40) });
+
+        DrawUILine(Color.gray);
+
+        EditorStyles.objectField.normal.textColor = Color.gray;
+        EditorGUILayout.BeginHorizontal();
+        {
+            GUILayout.Label("Asset Type", _guiLable, _lableOpt);
+            objectType = (ObjectType)EditorGUILayout.EnumPopup(objectType, _fieldOpt);
+        }
+        EditorGUILayout.EndHorizontal();
+
+        EditorGUILayout.BeginHorizontal();
+        switch (objectType)
+        {
+            case ObjectType.Scene:
+                GUILayout.Label("Scene", _guiLable, _lableOpt);
+                testObj = EditorGUILayout.ObjectField(testObj, typeof(SceneAsset), false, _fieldOpt);
+                break;
+            case ObjectType.Scriptable:
+                GUILayout.Label("Scriptable", _guiLable, _lableOpt);
+                testObj = EditorGUILayout.ObjectField(testObj, typeof(ScriptableObject), false, _fieldOpt);
+                break;
+            default:
+                testObj = null; break;
+        }
+        EditorGUILayout.EndHorizontal();
+
+        if (testObj != null)
+        {
+            EditorGUILayout.BeginHorizontal();
+            {
+                GUILayout.Label("Custome Name", _guiLable, _lableOpt);
+                isCustome = EditorGUILayout.Toggle(isCustome, _fieldOpt);
+            }
+            EditorGUILayout.EndHorizontal();
+
+            if (isCustome)
+            {
+                if (string.IsNullOrEmpty(bundleName) || string.IsNullOrWhiteSpace(bundleName))
+                    bundleName = testObj.name.ToLower();
+
+                EditorGUILayout.BeginHorizontal();
+                {
+                    GUILayout.Label("Bundle Name", _guiLable, _lableOpt);
+                    bundleName = EditorGUILayout.TextField(bundleName, _fieldOpt);
+                }
+                EditorGUILayout.EndHorizontal();
+
+                string _lable = string.Format("dlc/{0}/{1}.{2}", GetBundleName(objectType), bundleName.ToLower(), dlcExt);
+
+                EditorGUILayout.BeginHorizontal();
+                EditorGUILayout.EndHorizontal();
+
+                EditorGUILayout.BeginHorizontal();
+
+                GUIStyle _guiLable2 = new GUIStyle()
+                {
+                    fontSize = 12,
+                    richText = true,
+                    fontStyle = FontStyle.Italic,
+                    alignment = TextAnchor.MiddleLeft,
+                    margin = new RectOffset(150, 0, 0, 0)
+                };
+                _guiLable2.normal.textColor = Color.gray;
+                GUILayout.Label(_lable, _guiLable2, new GUILayoutOption[] { GUILayout.Width(300) });
+                EditorGUILayout.EndHorizontal();
+            }
+            else
+            {
+                string _lable = string.Format("dlc/{0}/{1}.{2}", GetBundleName(objectType), testObj.name.ToLower(), dlcExt);
+
+                EditorGUILayout.BeginHorizontal();
+                {
+                    GUILayout.Label("Bundle Name", _guiLable, _lableOpt);
+                    EditorGUILayout.LabelField(_lable, EditorStyles.label, _fieldOpt);
+                }
+                EditorGUILayout.EndHorizontal();
+            }
+
+            EditorGUILayout.BeginHorizontal(GUI.skin.box);
+            {
+                GUILayout.Label("Platforms");
+
+                EditorGUILayout.BeginVertical(GUI.skin.box);
+                {
+                    w = EditorGUILayout.Toggle("Windows", w, new GUILayoutOption[] { GUILayout.Width(200) });
+                    a = EditorGUILayout.Toggle("Android", a, new GUILayoutOption[] { GUILayout.Width(200) });
+
+                    i = EditorGUILayout.Toggle("iOS", i, new GUILayoutOption[] { GUILayout.Width(200) });
+                    m = EditorGUILayout.Toggle("macOS", m, new GUILayoutOption[] { GUILayout.Width(200) });
+                }
+                EditorGUILayout.EndVertical();
+            }
+            EditorGUILayout.EndHorizontal();
+        }
+
+        //ShowNotification(new GUIContent("No object selected for searching"));
+        //DrawUILine(Color.gray);
 
 
-        if (GUILayout.Button("Set name"))
-        { CreateAssetBundleTag(); }
+        /* if (GUILayout.Button("Set name"))
+         { CreateAssetBundleTag(); }
 
-        if (GUILayout.Button("Create"))
-        { CreateBundle(); }
+         if (GUILayout.Button("Create"))
+         { CreateBundle(); }
 
-        if (GUILayout.Button("Load"))
-        { LoadBundle(); }
+         if (GUILayout.Button("Load"))
+         { LoadBundle(); }*/
+    }
+
+
+
+    static void ReadOnlyTextField(string label, string text)
+    {
+        EditorGUILayout.BeginHorizontal();
+        {
+            EditorGUILayout.LabelField(label, GUILayout.Width(EditorGUIUtility.labelWidth - 4));
+            EditorGUILayout.SelectableLabel(text, EditorStyles.label, GUILayout.Height(EditorGUIUtility.singleLineHeight));
+        }
+        EditorGUILayout.EndHorizontal();
+    }
+
+    static string GetBundleName(ObjectType _type)
+    {
+        string typeString = string.Empty;
+        switch (_type)
+        {
+            case ObjectType.Scene: typeString = "Scene"; break;
+            case ObjectType.Scriptable: typeString = "Scriptable"; break;
+        }
+        return typeString;
+    }
+
+    static void DrawUILine(Color color, int thickness = 2, int padding = 10)
+    {
+        Rect r = EditorGUILayout.GetControlRect(GUILayout.Height(padding + thickness));
+        r.height = thickness;
+        r.y += padding / 2;
+        r.x -= 2;
+        r.width += 6;
+        EditorGUI.DrawRect(r, color);
     }
 
     private void CreateAssetBundleTag()
